@@ -14,12 +14,13 @@ public class HealthStatsController : ControllerBase
         _cryptoService = cryptoService;
     }
 
-    public record SubmitRequest(double Value);
+    public record SubmitRequest(string CiphertextBase64);
 
     [HttpPost("submit")]
     public IActionResult Submit([FromBody] SubmitRequest request)
     {
-        _cryptoService.Submit(request.Value);
+        byte[] bytes = Convert.FromBase64String(request.CiphertextBase64);
+        _cryptoService.Submit(bytes);
         return Ok(new { message = "Submitted", totalCount = _cryptoService.SubmissionCount });
     }
 
@@ -28,8 +29,9 @@ public class HealthStatsController : ControllerBase
     {
         try
         {
-            double average = _cryptoService.ComputeAverage();
-            return Ok(new { average, basedOnCount = _cryptoService.SubmissionCount });
+            byte[] resultBytes = _cryptoService.ComputeEncryptedAverage();
+            string base64 = Convert.ToBase64String(resultBytes);
+            return Ok(new { encryptedAverageBase64 = base64, basedOnCount = _cryptoService.SubmissionCount });
         }
         catch (InvalidOperationException ex)
         {

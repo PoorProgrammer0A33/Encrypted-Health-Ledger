@@ -2,52 +2,49 @@
 using EHL.Ledger;
 using Microsoft.Research.SEAL;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace EHL.Api.Services;
 
 public class CryptoService
 {
-    private readonly CkksHelper _helper;
+    private readonly ServerCrypto _server;
     private readonly LedgerService _ledger;
     private readonly List<Ciphertext> _submissions = new();
 
     public CryptoService(LedgerService ledger)
     {
-        _helper = new CkksHelper();
+        _server = new ServerCrypto();
         _ledger = ledger;
     }
 
-    public void Submit(double value)
+    public void Submit(byte[] ciphertextBytes)
     {
-        var encrypted = _helper.Encrypt(value);
-        _submissions.Add(encrypted);
+        var ct = _server.Deserialize(ciphertextBytes);
+        _submissions.Add(ct);
 
-        string hash = ComputeHash(encrypted);
+        string hash = ComputeHash(ciphertextBytes);
         _ledger.LogEvent("SUBMIT", hash);
     }
 
-    public double ComputeAverage()
+    public byte[] ComputeEncryptedAverage()
     {
         if (_submissions.Count == 0)
             throw new InvalidOperationException("No submissions yet.");
 
-        var encAvg = _helper.Average(_submissions);
-        double result = _helper.Decrypt(encAvg);
+        var encAvg = _server.Average(_submissions);
+        byte[] resultBytes = _server.Serialize(encAvg);
 
-        string hash = ComputeHash(encAvg);
+        string hash = ComputeHash(resultBytes);
         _ledger.LogEvent("COMPUTE_AVERAGE", hash);
 
-        return result;
+        return resultBytes;
     }
 
     public int SubmissionCount => _submissions.Count;
 
-    private static string ComputeHash(Ciphertext ciphertext)
+    private static string ComputeHash(byte[] bytes)
     {
-        using var ms = new MemoryStream();
-        ciphertext.Save(ms);
-        byte[] hashBytes = SHA256.HashData(ms.ToArray());
+        byte[] hashBytes = SHA256.HashData(bytes);
         return Convert.ToHexString(hashBytes);
     }
 }

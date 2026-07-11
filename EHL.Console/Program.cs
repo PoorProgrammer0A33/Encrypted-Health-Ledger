@@ -1,29 +1,16 @@
 ﻿using EHL.Crypto;
 
-var helper = new CkksHelper();
+var client = new ClientCrypto();
+var server = new ServerCrypto();
 
-double a = 42.5;
-double b = 17.3;
+var values = new List<double> { 42.5, 17.3, 60.0, 25.0 };
+var encryptedBytes = values.ConvertAll(v => client.Encrypt(v));
 
-Console.WriteLine($"Plaintext:  {a} + {b} = {a + b}");
+var deserialized = encryptedBytes.ConvertAll(b => server.Deserialize(b));
+var encAvgResult = server.Average(deserialized);
+var resultBytes = server.Serialize(encAvgResult);
 
-var encA = helper.Encrypt(a);
-var encB = helper.Encrypt(b);
-var encSum = helper.Add(encA, encB);
-double decrypted = helper.Decrypt(encSum);
+double decrypted = client.Decrypt(resultBytes);
 
-Console.WriteLine($"Encrypted sum, decrypted: {decrypted}");
-
-var encProduct = helper.Multiply(encA, encB);
-double decryptedProduct = helper.Decrypt(encProduct);
-Console.WriteLine($"Plaintext:  {a} * {b} = {a * b}");
-Console.WriteLine($"Encrypted product, decrypted: {decryptedProduct}");
-
-var values = new List<double>() { 42.5, 17.3, 60.0, 25.0 };
-var encryptedValues = values.ConvertAll(v => helper.Encrypt(v));
-
-var encAvg = helper.Average(encryptedValues);
-var decryptAvg = helper.Decrypt(encAvg);
-
-Console.WriteLine($"Plaintext: {values.Average()}");
-Console.WriteLine($"Encrypted Average, decrypted: {decryptAvg}");
+Console.WriteLine($"Plaintext average: {values.Average()}");
+Console.WriteLine($"Decrypted (via full client/server round trip): {decrypted}");

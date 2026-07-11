@@ -3,6 +3,7 @@
     <File Path=".gitignore" />
   </Folder>
   <Project Path="EHL.Api/EHL.Api.csproj" Id="df90c922-48dc-4b63-8ea6-6a5273cc4c5c" />
+  <Project Path="EHL.Client/EHL.Client.csproj" Id="475103de-5bec-40c1-ad37-11c534da5f6e" />
   <Project Path="EHL.Console/EHL.Console.csproj" />
   <Project Path="EHL.Crypto.Tests/EHL.Crypto.Tests.csproj" />
   <Project Path="EHL.Crypto/EHL.Crypto.csproj" />
