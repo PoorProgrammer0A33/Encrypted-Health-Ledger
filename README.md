@@ -73,9 +73,9 @@ It pairs that with a second, complementary guarantee: every submission and compu
 
 **`POST /api/HealthStats/submit`**
 ```json
-{ "value": 42.5 }
+{ "ciphertextBase64": "<base64-encoded ciphertext, produced client-side>" }
 ```
-Encrypts the value and stores it. Logs a `SUBMIT` event to the ledger.
+Stores the ciphertext as-is; the server never decrypts it. Logs a `SUBMIT` event to the ledger.
 
 Response:
 ```json
@@ -88,8 +88,9 @@ Computes the homomorphic average of all submitted values, decrypts only the fina
 
 Response:
 ```json
-{ "average": 36.19999999947569, "basedOnCount": 4 }
+{ "encryptedAverageBase64": "<base64-encoded ciphertext>", "basedOnCount": 4 }
 ```
+The result is returned encrypted. Only a client holding the matching secret key (generated in `EHL.Client`) can decrypt it.
 
 ## Verifying the ledger
 
