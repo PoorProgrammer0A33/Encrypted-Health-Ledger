@@ -11,7 +11,8 @@ It pairs that with a second, complementary guarantee: every submission and compu
 ## Architecture
 
 - **EHL.Crypto** — a C# wrapper around Microsoft SEAL implementing CKKS-scheme homomorphic encryption: encrypt, add, multiply, multiply-by-constant (used for division), and decrypt.
-- **EHL.Api** — an ASP.NET Core Web API exposing `POST /submit` and `GET /average`. Orchestrates encryption and holds submitted ciphertexts in memory.
+- **EHL.Client** — a console app representing the clinic. Generates and holds its own CKKS key pair, encrypts values locally before submission, and is the only component that ever decrypts data.
+- **EHL.Api** — an ASP.NET Core Web API exposing `POST /submit` and `GET /average`. Operates entirely on serialized ciphertext bytes — performs homomorphic addition and constant multiplication without ever possessing a public or secret key.
 - **EHL.Ledger** — a thin data-access layer writing audit events to an Oracle 26ai Free blockchain table.
 - **Oracle blockchain table** — an append-only, SHA2-512 hash-chained table logging every submission and computation as an event type + a hash of the ciphertext involved. No plaintext or ciphertext values are ever stored in the ledger — only proof that an event occurred.
 
@@ -26,6 +27,8 @@ It pairs that with a second, complementary guarantee: every submission and compu
 **Division by a public constant.** CKKS has no native division operator. Averaging is implemented as multiplying the encrypted sum by the plaintext constant `1/n`, since `n` (the count of submissions) is public information, not sensitive data.
 
 **Blockchain table, precisely.** Oracle's blockchain table is a centralized, tamper-evident, insert-only ledger — rows are hash-chained so any modification breaks verification. It is not a decentralized network with consensus across untrusted parties; the guarantee here is tamper-evidence within a trusted database, not decentralization.
+
+**Server-blind computation.** The server never holds an encryption key of any kind — only the shared, non-secret CKKS parameters (polynomial modulus degree, coefficient modulus chain) needed to interpret ciphertext structure. It can add and scale ciphertexts, but cannot decrypt them under any circumstance. Only the client, which generated the key pair, can decrypt a result.
 
 ## Setup
 
