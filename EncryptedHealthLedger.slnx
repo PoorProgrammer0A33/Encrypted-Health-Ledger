@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+  </Folder>
+  <Project Path="EHL.Api/EHL.Api.csproj" Id="df90c922-48dc-4b63-8ea6-6a5273cc4c5c" />
+  <Project Path="EHL.Console/EHL.Console.csproj" />
+  <Project Path="EHL.Crypto.Tests/EHL.Crypto.Tests.csproj" />
+  <Project Path="EHL.Crypto/EHL.Crypto.csproj" />
+  <Project Path="EHL.Ledger/EHL.Ledger.csproj" Id="7b54fd2e-b7e3-460b-8c9b-54a203f1464b" />
+</Solution>
