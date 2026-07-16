@@ -15,6 +15,8 @@ public class ClientCrypto
     public PublicKey PublicKey { get; }
     public SecretKey SecretKey { get; }
 
+    public RelinKeys RelinKeys { get; }
+
     public ClientCrypto()
     {
         _context = CkksParams.CreateContext();
@@ -22,7 +24,10 @@ public class ClientCrypto
 
         SecretKey = keygen.SecretKey;
         keygen.CreatePublicKey(out PublicKey publicKey);
+        keygen.CreateRelinKeys(out RelinKeys relinKeys);
         PublicKey = publicKey;
+        RelinKeys = relinKeys;
+
 
         _encryptor = new Encryptor(_context, PublicKey);
         _decryptor = new Decryptor(_context, SecretKey);
@@ -52,5 +57,15 @@ public class ClientCrypto
         var result = new List<double>();
         _encoder.Decode(plain, result);
         return result[0];
+    }
+
+    public int GetRemainingModulusLevels(byte[] ciphertextBytes)
+    {
+        var ct = new Ciphertext(_context);
+        using var ms = new MemoryStream(ciphertextBytes);
+        ct.Load(_context, ms);
+
+        var contextData = _context.GetContextData(ct.ParmsId);
+        return (int)contextData.ChainIndex;
     }
 }

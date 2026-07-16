@@ -7,6 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSignalR();
 
 string connectionString = builder.Configuration.GetConnectionString("OracleLedger")
     ?? throw new InvalidOperationException("OracleLedger connection string not found in configuration.");
@@ -26,4 +27,5 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<EHL.Api.Hubs.StatsHub>("/statshub");
 app.Run();

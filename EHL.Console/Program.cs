@@ -1,7 +1,18 @@
 ﻿using EHL.Crypto;
+using Microsoft.Research.SEAL;
 
 var client = new ClientCrypto();
-var server = new ServerCrypto();
+
+using var ms = new MemoryStream();
+client.RelinKeys.Save(ms);
+var relinBytes = ms.ToArray();
+
+var context = CkksParams.CreateContext();
+var relinKeys = new RelinKeys();
+using var loadMs = new MemoryStream(relinBytes);
+relinKeys.Load(context, loadMs);
+
+var server = new ServerCrypto(relinKeys);
 
 var values = new List<double> { 42.5, 17.3, 60.0, 25.0 };
 var encryptedBytes = values.ConvertAll(v => client.Encrypt(v));

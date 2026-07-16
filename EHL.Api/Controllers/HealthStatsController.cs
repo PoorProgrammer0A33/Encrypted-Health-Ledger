@@ -17,10 +17,10 @@ public class HealthStatsController : ControllerBase
     public record SubmitRequest(string CiphertextBase64);
 
     [HttpPost("submit")]
-    public IActionResult Submit([FromBody] SubmitRequest request)
+    public async Task<IActionResult> Submit([FromBody] SubmitRequest request)
     {
         byte[] bytes = Convert.FromBase64String(request.CiphertextBase64);
-        _cryptoService.Submit(bytes);
+        await _cryptoService.Submit(bytes);
         return Ok(new { message = "Submitted", totalCount = _cryptoService.SubmissionCount });
     }
 
@@ -37,5 +37,15 @@ public class HealthStatsController : ControllerBase
         {
             return BadRequest(new { error = ex.Message });
         }
+    }
+
+    public record RegisterKeysRequest(string RelinKeysBase64);
+
+    [HttpPost("register-keys")]
+    public IActionResult RegisterKeys([FromBody] RegisterKeysRequest request)
+    {
+        byte[] bytes = Convert.FromBase64String(request.RelinKeysBase64);
+        _cryptoService.RegisterKeys(bytes);
+        return Ok(new { message = "Keys registered" });
     }
 }

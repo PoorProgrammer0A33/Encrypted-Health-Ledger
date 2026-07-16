@@ -9,12 +9,14 @@ public class ServerCrypto
     private readonly SEALContext _context;
     private readonly Evaluator _evaluator;
     private readonly CKKSEncoder _encoder;
+    private readonly RelinKeys _relinKeys;
 
-    public ServerCrypto()
+    public ServerCrypto(RelinKeys relinKeys)
     {
         _context = CkksParams.CreateContext();
         _evaluator = new Evaluator(_context);
         _encoder = new CKKSEncoder(_context);
+        _relinKeys = relinKeys;
     }
 
     public Ciphertext Deserialize(byte[] bytes)
@@ -57,5 +59,29 @@ public class ServerCrypto
         for (int i = 1; i < values.Count; i++)
             sum = Add(sum, values[i]);
         return MultiplyByConstant(sum, 1.0 / values.Count);
+    }
+
+    public Ciphertext SumOfSquares(List<Ciphertext> values)
+    {
+        Ciphertext sum = null;
+        foreach (var v in values)
+        {
+            var squared = new Ciphertext();
+            _evaluator.Multiply(v, v, squared);
+            _evaluator.RelinearizeInplace(squared, _relinKeys); // needs RelinKeys in ServerCrypto now
+            _evaluator.RescaleToNextInplace(squared);
+
+            if (sum == null) sum = squared;
+            else sum = Add(sum, squared);
+        }
+        return sum;
+    }
+
+    public Ciphertext RawSum(List<Ciphertext> values)
+    {
+        var sum = values[0];
+        for (int i = 1; i < values.Count; i++)
+            sum = Add(sum, values[i]);
+        return sum;
     }
 }
