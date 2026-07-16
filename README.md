@@ -12,7 +12,7 @@ It pairs that with a second, complementary guarantee: every submission and compu
 
 - **EHL.Crypto** — a C# wrapper around Microsoft SEAL implementing CKKS-scheme homomorphic encryption: encrypt, add, multiply, multiply-by-constant (used for division), and decrypt.
 - **EHL.Client** — a console app representing the clinic. Generates and holds its own CKKS key pair, encrypts values locally before submission, and is the only component that ever decrypts data.
-- **EHL.Api** — an ASP.NET Core Web API exposing `POST /submit` and `GET /average`. Operates entirely on serialized ciphertext bytes — performs homomorphic addition and constant multiplication without ever possessing a public or secret key.
+- **EHL.Api** — an ASP.NET Core Web API exposing `POST /submit`, `GET /average`, and `POST /register-keys`, plus a SignalR hub (`/statshub`) that pushes live encrypted statistics to connected clients after every submission. Operates entirely on serialized ciphertext bytes — performs homomorphic addition and multiplication without ever possessing a public or secret key.
 - **EHL.Ledger** — a thin data-access layer writing audit events to an Oracle 26ai Free blockchain table.
 - **Oracle blockchain table** — an append-only, SHA2-512 hash-chained table logging every submission and computation as an event type + a hash of the ciphertext involved. No plaintext or ciphertext values are ever stored in the ledger — only proof that an event occurred.
 
@@ -29,6 +29,10 @@ It pairs that with a second, complementary guarantee: every submission and compu
 **Blockchain table, precisely.** Oracle's blockchain table is a centralized, tamper-evident, insert-only ledger — rows are hash-chained so any modification breaks verification. It is not a decentralized network with consensus across untrusted parties; the guarantee here is tamper-evidence within a trusted database, not decentralization.
 
 **Server-blind computation.** The server never holds an encryption key of any kind — only the shared, non-secret CKKS parameters (polynomial modulus degree, coefficient modulus chain) needed to interpret ciphertext structure. It can add and scale ciphertexts, but cannot decrypt them under any circumstance. Only the client, which generated the key pair, can decrypt a result.
+
+**Variance via sum of squares.** Alongside the running encrypted sum (`Σx`), the server also maintains an encrypted sum of squares (`Σx²`), computed via ciphertext-by-ciphertext multiplication. The client, after decrypting both, derives mean and variance locally: `variance = (Σx²/n) − mean²`. This mirrors the statistical foundation anomaly detection would build on, without requiring on-ciphertext comparison — which CKKS cannot perform.
+
+**Modulus chain level as an observable noise metric.** CKKS does not expose a "noise budget" the way BFV/BGV do; instead, remaining computational headroom shows up as how many levels remain in the ciphertext's modulus chain. In testing, after 5 submissions, the plain sum sat at chain level 2 while the sum of squares — which required one additional multiplication and rescale — sat at level 1, directly confirming that multiplication consumes chain budget faster than addition, live, in a real running system rather than as a one-off experiment.
 
 ## Setup
 
@@ -92,6 +96,10 @@ Response:
 ```
 The result is returned encrypted. Only a client holding the matching secret key (generated in `EHL.Client`) can decrypt it.
 
+## Real-time layer
+
+Clients register their (non-secret) relinearization keys once via `POST /api/HealthStats/register-keys`, then connect to the `/statshub` SignalR hub. After each submission, the server pushes an updated `StatsUpdated` event containing the encrypted sum, encrypted sum of squares, and current count. Only the connected client — holding the matching secret key — can decrypt these values and derive live mean, standard deviation, and modulus-chain-level diagnostics.
+
 ## Verifying the ledger
 
 ```sql
@@ -115,6 +123,7 @@ No error and a row count matching your total events confirms the chain is intact
 - **In-memory ciphertext storage.** Submitted ciphertexts are not persisted; restarting the API loses them. The audit log persists independently in Oracle.
 - **Single-tenant.** No authentication or per-clinic isolation yet — all submissions are pooled into one running average.
 - **Development connection string.** The Oracle password is stored in plaintext in `appsettings.json`. For anything beyond local development, this should move to environment variables, user secrets, or a secrets manager.
+- **Recomputes on every submission.** The server currently recalculates the full running sum and sum of squares on every single submit, which is fine at small scale but would need batching (e.g. every N submissions or every X seconds) to stay efficient at high submission volume.
 
 ## What this project actually demonstrates
 
